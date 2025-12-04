@@ -1,32 +1,24 @@
-# MAP ⇄ HIC Conversion Toolkit
+# Toolkit
 
-Scripts for converting between `.map` and `.hic` formats and combining two Hi-C maps, built around **Juicer Tools**.
+Scripts for converting between `.map` and `.hic` formats and combining two Hi-C maps, built around **Juicer Tools**, plus new analytical scripts for **row normalization**, **entropy**, and **CH(s)** computation.
+
+---
 
 ## Requirements
 
-- **Java JDK 1.7 or 1.8**  
-  Download: <http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html>  
-  (Ubuntu/LinuxMint alternative: <http://tecadmin.net/install-oracle-java-8-jdk-8-ubuntu-via-ppa/>)  
+- **Java JDK 1.7 or 1.8**
+  Download: <http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html>
+  (Ubuntu/LinuxMint alternative: <http://tecadmin.net/install-oracle-java-8-jdk-8-ubuntu-via-ppa/>)
   Minimum system requirements for Java: <http://java.com/en/download/help/sysreq.xml>
 
-- **Juicer Tools (latest .jar)**  
+- **Juicer Tools (latest .jar)**
   <https://github.com/aidenlab/juicer/wiki/Download>
 
-- **Python 3.9** (example environment)  
-  Dependencies: `numpy`, `pathlib`  
-  Install:
+- **Python 3.9+**
+  Dependencies: `numpy`, `pathlib`, `matplotlib`
   ```bash
-  pip install numpy pathlib
+  pip install numpy matplotlib pathlib
   ```
-
-- **Scripts**
-  - `converse_to_hic.py` (currently supports **1169×1169**; adjust if your map size/format differs)  
-    <img width="776" height="52" alt="image-20250512144059609" src="https://github.com/user-attachments/assets/f2a58f87-86e5-452f-a498-3d0a781b58d7" />
-  - `Convert_map_to_hic/convert_map_to_hic.py`
-  - `convert_from_hic_to_csv.py`
-  - `Combine_2hic.py`
-
-- **Input map files** (processed **one at a time** for now)
 
 ---
 
@@ -34,33 +26,81 @@ Scripts for converting between `.map` and `.hic` formats and combining two Hi-C 
 
 ### 1) `.map → .hic`
 
-1. Open `Convert_map_to_hic/convert_map_to_hic.py` and edit **`MAP_FILES`** (marked in the screenshot).  
-   <img width="936" height="616" alt="image-20250512144920611" src="https://github.com/user-attachments/assets/ad2b3f47-928b-415e-9f9e-abad8ddbefa1" />
-2. Run the script to generate the `.hic` file.
-
-> Note: If your input format/size differs, update `converse_to_hic.py` accordingly.
-
----
+1. Edit `Convert_map_to_hic/convert_map_to_hic.py` to specify the `.map` files.
+2. Run the script to produce the `.hic` file.
 
 ### 2) `.hic → .csv (.map)`
 
-1. Open the `.hic` in **Juicebox** to identify chromosome range and bin size (e.g., `chr11:1–122,082,543`, `Bin Size: 250 kb`, `Norm = None`).  
-2. Use **juicer_tools** to dump the observed matrix (example):
+1. Use Juicer Tools to dump the observed matrix, e.g.:
    ```bash
-   java -jar Tools/juicer_tools_1.22.01.jar dump observed NONE      "E:/chro_research/Week10/mouse_Big_hicmap/cellnames_cluster_4.hic"      chr11:1:122082543 chr11:1:122082543 BP 250000      mouse_cluster4_chr11_250kb.txt
+   java -jar juicer_tools.jar dump observed NONE input.hic chr1 chr1 BP 250000 output.txt
    ```
-3. Use the generated `.txt` as input to `convert_from_hic_to_csv.py`.
-4. Run `convert_from_hic_to_csv.py` to obtain the `.csv` (or `.map`) file.
+2. Run `convert_from_hic_to_csv.py` to convert to `.csv` (or `.map`).
+
+### 3) Combine Two `.hic` Maps
+
+Use `Combine_2hic.py` to merge two `.hic` files into one composite view.
 
 ---
 
-### 3) Combine two `.hic` maps into one view
+## 4) Row-normalization & Entropy
 
-- Set the correct paths in `Combine_2hic.py` and run.  
-- Combining **without normalization** is supported.
+**Script:** `row_norm_entropy.py`
+
+Performs **row normalization** on Hi-C matrices (masking near-diagonal intra-chromosomal regions, preserving inter-chromosomal interactions) and computes **entropy** for each row and globally.
+
+### Inputs
+- `.map` matrix (comma-delimited)
+- Chromosome region definitions (`regions`) and labels (`labels`)
+
+### Parameters
+- `exclude_offset`: width of diagonal mask (default = 4)
+- `file_path`: path to the input `.map`
+
+### Outputs
+- Console: total entropy and entropy per TAD (bits)
+- Figure: `hic_matrix_heatmap.png` — log-scale P-matrix heatmap
+
+### Example
+```bash
+python row_norm_entropy.py
+```
+
+---
+
+## 5) CH(s) Comparison Across States
+
+**Script:** `ch_across_states.py`
+
+Computes **CH(s)** (Contact Heterogeneity) across multiple biological states using **row-normalized P matrices**.
+
+### Directory Structure Example
+```
+DATA_ROOT/
+  WT3h_orig/
+  CD3h/
+  LM3h/
+  WT3h_after_CD3h/
+  WT3h_after_LM3h/
+```
+
+### Configuration Highlights
+- `EXCLUDE_OFFSET = 4`
+- `USE_RUNNING_AVG = True`
+- `RA_WINDOW = 50`
+- `REGIONS` and `LABELS` match your genome segmentation
+
+### Outputs
+- `CH_comparison_WHOLE.png` — whole-genome comparison
+- `CH_comparison_chr_<LABEL>.png` — per-chromosome comparison
+
+### Example
+```bash
+python ch_across_states.py
+```
 
 ---
 
 ## Reference
 
-- Juicer tool command list: <https://github.com/aidenlab/juicer/wiki/Pre>
+- Juicer Tools Documentation: <https://github.com/aidenlab/juicer/wiki/Pre>

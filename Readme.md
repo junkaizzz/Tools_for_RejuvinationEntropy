@@ -26,7 +26,7 @@ Scripts for converting between `.map` and `.hic` formats and combining two Hi-C 
 
 ### 1) `.map → .hic`
 
-1. Edit `Convert_map_to_hic/convert_map_to_hic.py` to specify the `.map` files.
+1. Edit `Codes/Convert_map_to_hic/convert_map_to_hic.py` to specify the `.map` files.
 2. Run the script to produce the `.hic` file.
 
 ### 2) `.hic → .csv (.map)`
@@ -104,4 +104,5 @@ python ch_whole_with_average.py
 ## Reference
 
 - Juicer Tools Documentation: <https://github.com/aidenlab/juicer/wiki/Pre>
+
 

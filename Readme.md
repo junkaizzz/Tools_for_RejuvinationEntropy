@@ -70,7 +70,7 @@ python row_norm_entropy.py
 
 ## 5) CH(s) Comparison Across States
 
-**Script:** `ch_across_states.py`
+**Script:** `ch_whole_with_average.py`
 
 Computes **CH(s)** (Contact Heterogeneity) across multiple biological states using **row-normalized P matrices**.
 
@@ -96,7 +96,7 @@ DATA_ROOT/
 
 ### Example
 ```bash
-python ch_across_states.py
+python ch_whole_with_average.py
 ```
 
 ---
@@ -104,3 +104,4 @@ python ch_across_states.py
 ## Reference
 
 - Juicer Tools Documentation: <https://github.com/aidenlab/juicer/wiki/Pre>
+

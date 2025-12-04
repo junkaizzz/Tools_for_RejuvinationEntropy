@@ -6,12 +6,17 @@ Outputs ONLY:
   - CH_comparison_chr_<LABEL>.png for LABEL in [2L,2R,3L,3R,4,X] (across states)
 
 Rules:
-  - Teacher-approved row normalization: mask same-chrom |i-j| <= EXCLUDE_OFFSET; keep inter-chrom
-  - Use BOTH upper & lower triangles when computing P(s)
-  - Y axis displayed as 0–8 with label "CH(s) (×10⁻⁴)"
-  - Running average smoothing (window=RA_WINDOW, 10–50), edge-padded, same length
+  - Teacher-approved row normalization: mask same-chrom |i-j|<=EXCLUDE_OFFSET; keep inter-chromosomal values
+  - Use BOTH upper & lower triangles when forming P(s)
+  - Y axis for WHOLE: 0–3 with label "CH(s) (×10⁻⁴)"
+  - Running average smoothing:
+        w = 100, centered:
+        * use only full windows (no padding)
+        * x-coordinate is the center of each window
+        * plotted s-range becomes shorter after smoothing
+  - X axis: genomic distance (not "bins"), same notation as Samira's graphs.
 
-Author: You
+Author: Junkai(Kain) Zhang
 Date: 2025-10-30
 """
 
@@ -20,9 +25,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 
-# ========= CONFIGURATION =========
-DATA_ROOT = r"D:\Chro"                 # ← Change to your data root
-OUT_DIR   = r"./out_ch_running_average_4l"   # Output directory
+# ========= Basic Settings =========
+DATA_ROOT = r"D:\Chro"                 # ← Change to your data root directory
+OUT_DIR   = r"./out_ch_running_average_100final"
 os.makedirs(OUT_DIR, exist_ok=True)
 
 STATE_DIRS = {
@@ -32,47 +37,85 @@ STATE_DIRS = {
     "WT_after_CD3h":  "WT3h_after_CD3h",
     "WT_after_LM3h":  "WT3h_after_LM3h",
 }
+
+# Display names for the graph legend (use the same naming convention as entropy plots)
+STATE_DISPLAY = {
+    "WT_orig":        "WT(Original)",
+    "CD3h":           "'Dead'",
+    "LM3h":           "Lamins depleted",
+    "WT_after_CD3h":  "Rejuvenated after 'Dead'",
+    "WT_after_LM3h":  "Rejuvenated after Lamins depleted",
+}
+
 GLOB_PATTERN = "*.map"
 DELIM = ','
 
-EXCLUDE_OFFSET = 4                     # Near-diagonal exclusion width
-N_BINS  = 1169                         # Total genome bins
+EXCLUDE_OFFSET = 4
+N_BINS  = 1169
 REGIONS = [(0, 225), (225, 438), (438, 659), (659, 966), (966, 985), (985, N_BINS)]
 LABELS  = ["2L", "2R", "3L", "3R", "4", "X"]
 
-# Plotting and y-axis settings
+# ========= Genomic Distance Conversion =========
+# Set the bin size consistent with Samira's notation (e.g., 10 kb per bin)
+BIN_SIZE_BP = 10_000
+X_UNIT = "Mb"   # Use "kb" if desired
+
+def bins_to_distance(s_array):
+    """Convert genomic distance (s in bins) into physical distance (kb/Mb)."""
+    s_array = np.asarray(s_array, dtype=float)
+    if X_UNIT.lower() == "mb":
+        return s_array * BIN_SIZE_BP / 1e6
+    elif X_UNIT.lower() == "kb":
+        return s_array * BIN_SIZE_BP / 1e3
+    else:
+        return s_array * BIN_SIZE_BP / 1e6
+
+# ========= Plot Aesthetics =========
 plt.rcParams["figure.facecolor"] = "white"
 COMBINED_FIGSIZE = (7.5, 5)
-CH_SCALE         = 1e-4               # Display 0–8 × 10⁻⁴ as 0–8
-YMAX_UNITS       = 6
-ch_formatter     = FuncFormatter(lambda v, pos: f"{v/CH_SCALE:.0f}")
 
-# Smoothing parameters (recommended 10–50)
+CH_SCALE = 1e-4
+YMAX_WHOLE_UNITS = 3
+YMAX_CHR_UNITS   = 25
+
+ch_formatter = FuncFormatter(lambda v, pos: f"{v/CH_SCALE:.0f}")
+
+AXES_LABEL_FONTSIZE = 18
+TICK_LABEL_FONTSIZE = 14
+TITLE_FONTSIZE      = 18
+LEGEND_FONTSIZE     = 14
+
+# ========= Smoothing Parameters =========
 USE_RUNNING_AVG  = True
-RA_WINDOW        = 50                  # ← Adjust between 10–50; disable smoothing by setting USE_RUNNING_AVG = False above
+RA_WINDOW        = 12   # teacher requests w = 100 — adjust if desired
 
-def apply_ch_axis(ax):
+def apply_ch_axis(ax, ymax_units):
     ax.yaxis.set_major_formatter(ch_formatter)
-    ax.set_yticks((np.arange(0, YMAX_UNITS + 1) * CH_SCALE).tolist())
-    ax.set_ylim(0, YMAX_UNITS * CH_SCALE)
-    ax.set_ylabel("CH(s) (×10⁻⁴)")
+    ax.set_yticks((np.arange(0, ymax_units + 1) * CH_SCALE).tolist())
+    ax.set_ylim(0, ymax_units * CH_SCALE)
+    ax.set_ylabel("CH(s) (×10⁻⁴)", fontsize=AXES_LABEL_FONTSIZE)
+    ax.tick_params(axis='y', labelsize=TICK_LABEL_FONTSIZE)
+
+def apply_x_axis(ax):
+    ax.set_xlabel(f"Genomic distance ({X_UNIT})", fontsize=AXES_LABEL_FONTSIZE)
+    ax.tick_params(axis='x', labelsize=TICK_LABEL_FONTSIZE)
 
 def running_average(y, window):
-    """Running average with edge padding, output has same length."""
+    """
+    Centered moving average ("teacher-required"):
+      - np.convolve(..., mode='valid'): use only full windows
+      - return length = len(y) - w + 1
+    """
     y = np.asarray(y, dtype=float)
     L = len(y)
     if L == 0 or window <= 1:
         return y
-    w = int(max(1, min(window, L)))      # clamp to [1, L]
+    w = int(max(1, min(window, L)))
     kernel = np.ones(w, dtype=float) / w
-    pad_left = w // 2
-    pad_right = w - 1 - pad_left
-    ypad = np.pad(y, (pad_left, pad_right), mode='edge')
-    return np.convolve(ypad, kernel, mode='valid')
+    return np.convolve(y, kernel, mode='valid')
 
-# ========= Utility functions =========
+# ========= Helper Functions =========
 def create_chromosome_labels(N, regions, labels):
-    """Assign chromosome labels for each genome bin."""
     lab = [''] * N
     for (region, label) in zip(regions, labels):
         s, e = region
@@ -81,11 +124,7 @@ def create_chromosome_labels(N, regions, labels):
     return lab
 
 def compute_row_normalized_P(matrix, chrom_labels, exclude_offset):
-    """
-    Row-normalize with masking:
-      - same chromosome & |i-j| <= exclude_offset: masked
-      - inter-chromosomal interactions kept
-    """
+    """Mask near-diagonal interactions within same chromosome; keep inter-chrom; row-normalize."""
     N = matrix.shape[0]
     I, J = np.indices((N, N))
     chrom_arr   = np.array(chrom_labels)
@@ -101,9 +140,8 @@ def compute_row_normalized_P(matrix, chrom_labels, exclude_offset):
 
 def compute_Ps_both_triangles(P, N, exclude_offset):
     """
-    Compute P(s) using both upper and lower triangles:
-      s = exclude_offset+1 .. N-1
-    Returns: s_values, Ps(s), counts = 2*(N-s)
+    Compute P(s) using both upper & lower triangle.
+    Returns s, Ps(s), counts (= number of elements for each s).
     """
     s_vals = np.arange(exclude_offset + 1, N, dtype=int)
     Ps     = np.empty_like(s_vals, dtype=float); Ps.fill(np.nan)
@@ -120,11 +158,10 @@ def compute_Ps_both_triangles(P, N, exclude_offset):
 
 def calc_CH_over_maps(P_list, N, exclude_offset):
     """
-    For multiple maps:
-      - compute Ps(s) for each map
-      - align to common min length
-      - CH(s) = std over maps of Ps(s)
-    Returns s_common, CH(s)
+    Across multiple Hi-C maps:
+      - compute Ps(s)
+      - align to common length
+      - CH(s) = standard deviation across maps
     """
     s_list, Ps_list = [], []
     for P in P_list:
@@ -135,19 +172,19 @@ def calc_CH_over_maps(P_list, N, exclude_offset):
         Ps_list.append(Ps)
     if not Ps_list:
         return np.array([]), np.array([])
+
     L = min(len(x) for x in s_list)
     s_common = s_list[0][:L]
     Ps_stack = np.vstack([arr[:L] for arr in Ps_list])  # (n_maps, L)
     CH = np.nanstd(Ps_stack, axis=0, ddof=1)
     return s_common, CH
 
-# ========= Main pipeline =========
+# ========= Main Script =========
 def main():
     chrom_labels_whole = create_chromosome_labels(N_BINS, REGIONS, LABELS)
 
-    # Across-state comparison containers
-    compare_whole = {}                           # state -> (s, CH)
-    compare_by_chr = {lbl: {} for lbl in LABELS} # chr -> {state -> (s, CH)}
+    compare_whole = {}                      
+    compare_by_chr = {lbl: {} for lbl in LABELS}
 
     for state, subdir in STATE_DIRS.items():
         folder = os.path.join(DATA_ROOT, subdir)
@@ -157,7 +194,6 @@ def main():
             continue
         print(f"[INFO] State={state}, files={len(files)}")
 
-        # Collect P for whole genome & per chromosome
         P_list_whole = []
         P_lists_per_chr = {lbl: [] for lbl in LABELS}
 
@@ -168,74 +204,108 @@ def main():
             P_whole = compute_row_normalized_P(M, chrom_labels_whole, EXCLUDE_OFFSET)
             P_list_whole.append(P_whole)
 
-            # Chromosome blocks
+            # Per chromosome block
             for (start, end), lbl in zip(REGIONS, LABELS):
                 block = M[start:end, start:end]
                 block_labels = [lbl] * (end - start)
                 P_block = compute_row_normalized_P(block, block_labels, EXCLUDE_OFFSET)
                 P_lists_per_chr[lbl].append(P_block)
 
-        # Whole-genome CH(s)
+        # Whole-genome CH
         s_w, CH_w = calc_CH_over_maps(P_list_whole, N_BINS, EXCLUDE_OFFSET)
         if len(s_w):
             compare_whole[state] = (s_w, CH_w)
 
-        # Per-chromosome CH(s)
+        # Per-chromosome CH
         for (start, end), lbl in zip(REGIONS, LABELS):
-            L = end - start
-            if L <= EXCLUDE_OFFSET + 1:
+            L_chr = end - start
+            if L_chr <= EXCLUDE_OFFSET + 1:
                 continue
-            s_c, CH_c = calc_CH_over_maps(P_lists_per_chr[lbl], L, EXCLUDE_OFFSET)
+            s_c, CH_c = calc_CH_over_maps(P_lists_per_chr[lbl], L_chr, EXCLUDE_OFFSET)
             if len(s_c):
                 compare_by_chr[lbl][state] = (s_c, CH_c)
 
-    # —— Plot WHOLE (across states) —— #
+    # ========= Plot WHOLE-genome CH(s) =========
     if compare_whole:
         min_len = min(len(v[0]) for v in compare_whole.values())
         fig, ax = plt.subplots(figsize=COMBINED_FIGSIZE)
-        for state, (s, ch) in compare_whole.items():
-            ch_use = ch[:min_len]
-            if USE_RUNNING_AVG:
-                ch_use = running_average(ch_use, RA_WINDOW)
-            ax.plot(s[:min_len], ch_use, lw=1.8, marker='o', ms=3.0, label=state)
-        ax.set_xlabel("Genomic distance s (bins)")
-        apply_ch_axis(ax)
-        title = "CH(s) Comparison Across States — WHOLE (both triangles)"
+
         if USE_RUNNING_AVG:
-            title += f" | running avg (w={RA_WINDOW})"
-        ax.set_title(title)
+            for state, (s, ch) in compare_whole.items():
+                s_use  = s[:min_len]
+                ch_use = ch[:min_len]
+                ch_sm  = running_average(ch_use, RA_WINDOW)
+
+                w_eff = int(max(1, min(RA_WINDOW, len(ch_use))))
+                center_offset = (w_eff - 1) // 2
+                s_center = s_use[center_offset : center_offset + len(ch_sm)]
+
+                x_dist = bins_to_distance(s_center)
+                label  = STATE_DISPLAY.get(state, state)
+                ax.plot(x_dist, ch_sm, lw=1.8, marker='o', ms=3.0, label=label)
+        else:
+            for state, (s, ch) in compare_whole.items():
+                s_use  = s[:min_len]
+                x_dist = bins_to_distance(s_use)
+                label  = STATE_DISPLAY.get(state, state)
+                ax.plot(x_dist, ch[:min_len], lw=1.8, marker='o', ms=3.0, label=label)
+
+        apply_x_axis(ax)
+        apply_ch_axis(ax, YMAX_WHOLE_UNITS)
+
+        ax.set_title("CH(s) Comparison Across States — Whole genome", fontsize=TITLE_FONTSIZE)
         ax.grid(True, ls="--", alpha=0.5)
-        ax.legend(frameon=False)
+        ax.legend(frameon=False, fontsize=LEGEND_FONTSIZE)
+
         fig.tight_layout()
-        fig.savefig(os.path.join(OUT_DIR, "CH_comparison_WHOLE.png"), dpi=300, bbox_inches="tight")
+        fig.savefig(os.path.join(OUT_DIR, "CH_comparison_WHOLE.png"),
+                    dpi=300, bbox_inches="tight")
         plt.close(fig)
 
-    # —— Plot per-chromosome comparisons —— #
+    # ========= Plot Per-Chromosome CH(s) =========
     for lbl in LABELS:
         states_for_lbl = compare_by_chr.get(lbl, {})
         if not states_for_lbl:
             continue
         min_len = min(len(v[0]) for v in states_for_lbl.values())
         fig, ax = plt.subplots(figsize=COMBINED_FIGSIZE)
-        for state, (s, ch) in states_for_lbl.items():
-            ch_use = ch[:min_len]
-            if USE_RUNNING_AVG:
-                ch_use = running_average(ch_use, RA_WINDOW)
-            ax.plot(s[:min_len], ch_use, lw=1.8, marker='o', ms=3.0, label=state)
-        ax.set_xlabel("Genomic distance s (bins)")
-        apply_ch_axis(ax)
-        title = f"CH(s) Comparison Across States — {lbl} (both triangles)"
+
         if USE_RUNNING_AVG:
-            title += f" | running avg (w={RA_WINDOW})"
-        ax.set_title(title)
+            for state, (s, ch) in states_for_lbl.items():
+                s_use  = s[:min_len]
+                ch_use = ch[:min_len]
+                ch_sm  = running_average(ch_use, RA_WINDOW)
+
+                w_eff = int(max(1, min(RA_WINDOW, len(ch_use))))
+                center_offset = (w_eff - 1) // 2
+                s_center = s_use[center_offset : center_offset + len(ch_sm)]
+                x_dist = bins_to_distance(s_center)
+
+                label = STATE_DISPLAY.get(state, state)
+                ax.plot(x_dist, ch_sm, lw=1.8, marker='o', ms=3.0, label=label)
+        else:
+            for state, (s, ch) in states_for_lbl.items():
+                s_use  = s[:min_len]
+                x_dist = bins_to_distance(s_use)
+                label  = STATE_DISPLAY.get(state, state)
+                ax.plot(x_dist, ch[:min_len], lw=1.8, marker='o', ms=3.0, label=label)
+
+        apply_x_axis(ax)
+        apply_ch_axis(ax, YMAX_CHR_UNITS)
+
+        ax.set_title(f"CH(s) Comparison Across States — chr {lbl}",
+                     fontsize=TITLE_FONTSIZE)
         ax.grid(True, ls="--", alpha=0.5)
-        ax.legend(frameon=False)
+        ax.legend(frameon=False, fontsize=LEGEND_FONTSIZE)
+
         fig.tight_layout()
-        fig.savefig(os.path.join(OUT_DIR, f"CH_comparison_chr_{lbl}.png"), dpi=300, bbox_inches="tight")
+        fig.savefig(os.path.join(OUT_DIR, f"CH_comparison_chr_{lbl}.png"),
+                    dpi=300, bbox_inches="tight")
         plt.close(fig)
 
     print(f"[DONE] Comparison plots saved in: {OUT_DIR}")
     print(f"      Running average: {'ON' if USE_RUNNING_AVG else 'OFF'}, window={RA_WINDOW}")
+    print(f"      X-axis unit: {X_UNIT}, BIN_SIZE_BP={BIN_SIZE_BP}")
 
 if __name__ == "__main__":
     main()

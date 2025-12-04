@@ -1,0 +1,59 @@
+HiC_0.2_evo1_av1min_av18.map
+Exclude = 4
+Total entropy (bits) = 10319.4303
+Entropy per TAD (bits) = 8.827571
+
+HiC_0.2_evo2_av1min_av18.map
+Exclude = 4
+Total entropy (bits) = 10405.6616
+Entropy per TAD (bits) = 8.901336
+
+HiC_0.2_evo3_av1min_av18.map
+Exclude = 4
+Total entropy (bits) = 10449.7950
+Entropy per TAD (bits) = 8.939089
+
+HiC_0.2_evo4_av1min_av18.map
+Exclude = 4
+Total entropy (bits) = 10462.4452
+Entropy per TAD (bits) = 8.949910
+
+HiC_0.2_evo5_av1min_av18.map
+Exclude = 4
+Total entropy (bits) = 10451.3524
+Entropy per TAD (bits) = 8.940421
+
+HiC_0.2_evo6_av1min_av18.map
+Exclude = 4
+Total entropy (bits) = 10450.8085
+Entropy per TAD (bits) = 8.939956
+
+HiC_0.2_evo7_av1min_av18.map
+Exclude = 4
+Total entropy (bits) = 10470.4791
+Entropy per TAD (bits) = 8.956783
+
+HiC_0.2_evo8_av1min_av18.map
+Exclude = 4
+Total entropy (bits) = 10462.9176
+Entropy per TAD (bits) = 8.950314
+
+HiC_0.2_evo9_av1min_av18.map
+Exclude = 4
+Total entropy (bits) = 10466.8809
+Entropy per TAD (bits) = 8.953705
+
+HiC_0.2_evo10_av1min_av18.map
+Exclude = 4
+Total entropy (bits) = 10467.5281
+Entropy per TAD (bits) = 8.954258
+
+HiC_0.2_evo11_av1min_av18.map
+Exclude = 4
+Total entropy (bits) = 10472.8894
+Entropy per TAD (bits) = 8.958845
+
+HiC_0.2_evo12_av1min_av18.map
+Exclude = 4
+Total entropy (bits) = 10456.4492
+Entropy per TAD (bits) = 8.944781

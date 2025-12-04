@@ -1,0 +1,47 @@
+1min:
+Total entropy (bits) = 9426.5923
+Entropy per TAD (bits) = 8.063809
+
+2min:
+Total entropy (bits) = 9216.4047
+Entropy per TAD (bits) = 7.884007
+
+3min:
+Total entropy (bits) = 9168.5095
+Entropy per TAD (bits) = 7.843036
+
+4min:
+Total entropy (bits) = 9082.5544
+Entropy per TAD (bits) = 7.769508
+
+5min:
+Total entropy (bits) = 9085.7436
+Entropy per TAD (bits) = 7.772236
+
+6min:
+Total entropy (bits) = 9103.4357
+Entropy per TAD (bits) = 7.78737
+
+7min:
+Total entropy (bits) = 9106.4794
+Entropy per TAD (bits) = 7.789974
+
+8min:
+Total entropy (bits) = 9112.1292
+Entropy per TAD (bits) = 7.794807
+
+9min:
+Total entropy (bits) = 9094.2405
+Entropy per TAD (bits) = 7.779504
+
+10min:
+Total entropy (bits) = 9071.8116
+Entropy per TAD (bits) = 7.760318
+
+11min:
+Total entropy (bits) = 9137.5752
+Entropy per TAD (bits) = 7.816574
+
+12min:
+Total entropy (bits) = 9128.9585
+Entropy per TAD (bits) = 7.809203

@@ -109,7 +109,7 @@ DATA_ROOT/
 ### Configuration Highlights
 - `EXCLUDE_OFFSET = 4`
 - `USE_RUNNING_AVG = True`
-- `RA_WINDOW = 50`
+- `RA_WINDOW = 100`
 - `REGIONS` and `LABELS` match your genome segmentation
 
 ### Outputs

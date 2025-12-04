@@ -1,15 +1,22 @@
 # -*- coding: utf-8 -*-
+"""
+Author: Junkai Zhang (Kain)
+Created:  '2025-09-15'
+Last Modified:2025-09-15
+Email: junkaiz@vt.edu
+"""
+
 import os
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 
 # =========================
-# 可调参数（统一样式）
+# Adjustable parameters (unified style)
 # =========================
 OUT_DIR = r"D:\Chro"
 os.makedirs(OUT_DIR, exist_ok=True)
 
-# === 通用样式设置 ===
+# === Common style settings ===
 BASE_FS   = float(plt.rcParams.get('font.size', 10.0))
 LABEL_FS  = BASE_FS * 3
 TICK_FS   = BASE_FS * 2
@@ -26,6 +33,7 @@ connect_style = dict(linestyle='--', linewidth=1.5, alpha=0.9, color=transition_
 k_formatter = FuncFormatter(lambda v, pos: f"{v/1000:.1f}")
 
 def apply_common_axis_style(ax, ylim=(9000, 10600), y_label='Entropy (×10^3 bits)'):
+    """Apply common axis styling."""
     ax.set_ylim(*ylim)
     ax.yaxis.set_major_formatter(k_formatter)
     ax.set_xlabel('Time (minutes)', fontsize=LABEL_FS)
@@ -36,7 +44,7 @@ def apply_common_axis_style(ax, ylim=(9000, 10600), y_label='Entropy (×10^3 bit
                    labelsize=TICK_FS, length=MINOR_LEN, width=MINOR_W)
 
 # =========================
-# 数据：WT → Lamins depleted → WT (Rejuvenated)
+# Data: WT → Lamins depleted → WT (Rejuvenated)
 # =========================
 
 # WT (original)
@@ -78,7 +86,7 @@ rejuv_total = [
 ]
 
 # =========================
-# 串联时间轴
+# Serial time axis
 # =========================
 wt_x       = wt_min
 trans1_x   = [m + 180 for m in trans_wt_lm_min]
@@ -87,41 +95,41 @@ trans2_x   = [m + 372 for m in trans_lm_rejuv_min]
 rejuv_x    = [m + 384 for m in rejuv_min]
 
 # =========================
-# 绘图
+# Plotting
 # =========================
 plt.figure(figsize=(12,6))
 
-# 主阶段曲线
+# Main phase curves
 plt.plot(wt_x,    wt_total,     label='WT (Original)',           marker='o', linestyle='-')
 plt.plot(lm_x,    lm_total,     label='Lamins depleted',         marker='o', linestyle='-')
 plt.plot(rejuv_x, rejuv_total,  label='WT (Rejuvenated)',        marker='o', linestyle='-')
 
-# 两段过渡（均进图例）
+# Two transition segments (both shown in legend)
 plt.plot(trans1_x, trans_wt_lm_total, linestyle='--', marker=None, color=transition_color,
          label='Transition (WT → Lamins depleted)')
 plt.plot(trans2_x, trans_lm_rejuv_total, linestyle='--', marker=None, color=transition_color,
          label='Transition (Lamins depleted → Rejuvenated WT)')
 
-# 竖直连接（也为虚线）
+# Vertical connectors (also dashed)
 plt.plot([wt_x[-1],     trans1_x[0]], [wt_total[-1],     trans_wt_lm_total[0]],  **connect_style)
 plt.plot([trans1_x[-1], lm_x[0]],     [trans_wt_lm_total[-1], lm_total[0]],      **connect_style)
 plt.plot([lm_x[-1],     trans2_x[0]], [lm_total[-1],     trans_lm_rejuv_total[0]],  **connect_style)
-plt.plot([trans2_x[-1], rejuv_x[0]],  [trans_lm_rejuv_total[-1], rejuv_total[0]],   **connect_style)
+plt.plot([trans2_x[-1], rejuv_x[0]],  [trans_lm_rejuv_total[0], rejuv_total[0]],   **connect_style)
 
-# 过渡散点
+# Transition scatter points
 plt.scatter(trans1_x, trans_wt_lm_total, s=12, marker='o', color=transition_color, zorder=5)
 plt.scatter(trans2_x, trans_lm_rejuv_total, s=12, marker='o', color=transition_color, zorder=5)
 
-# 标题
+# Title
 plt.title('WT → Lamins depleted → WT (Rejuvenated): Entropy')
 
-# 统一样式
+# Apply common style
 ax = plt.gca()
 apply_common_axis_style(ax)
 plt.grid(True, linestyle='--', alpha=0.5)
 plt.legend(fontsize=LEGEND_FS)
 
-# 保存
+# Save figure
 out_path = os.path.join(OUT_DIR, "total_entropy_WT_LaminsDepleted_RejuvenatedWT.png")
 plt.savefig(out_path, dpi=300, bbox_inches='tight')
 plt.close()
